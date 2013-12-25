@@ -7,7 +7,7 @@
 
 import os
 import sys
-import commands
+import subprocess
 
 print "Este script configurará Django con Nginx, Gunicorn, virtualenv, supervisor y PostgreSQL"
 print "Lo primero que se va a ejecutar es aptitude update && upgrade, es recomendable para las instalaciones posteriores"
@@ -15,14 +15,16 @@ print "Lo primero que se va a ejecutar es aptitude update && upgrade, es recomen
 respuactu = raw_input("Premites actualizar el sistema (s/n)")
 
 if respuactu == s :
-    commands.getoutput(["aptitude","update"])
-    commands.getoutput(["aptitude","upgrade"])
+    subprocess.call(["aptitude","update"])
+    subprocess.call(["aptitude","upgrade"])
 else:
    break
    
 dominio = raw_input("Introduce tu dominio ej hackingcodeschool.net : ")
 
 print "Ahora se instalará postgres"
+usuariopost = raw_input("Introduce el nuevo usuari@ para la base de datos de tu aplicación: ")
+
 
 commands.getoutput(["aptitude","install", "postgresql postgresql-contrib"])
 commands.getoutput(["su","-", "postgres"])
