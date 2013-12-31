@@ -10,7 +10,6 @@ Creado por Kaotika ada_lovelance@hackingcodeschool.net Visitanos en hackingcodes
 import subprocess
 import os
 import sys
-import sh
 import re
 
 ##################
