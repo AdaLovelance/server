@@ -128,9 +128,6 @@ def remplace(fichero, stringA, stringB):
 print "Se configurará el fichero settings.py con tus cambios, a continuación se mostrarán las modificaciones"
 
 
-userdb = "triunfo"
-passdb1 = "hola"
-
 remplace('settings.py','django.db.backends.sqlite3', 'django.db.backends.postgresql_psycopg2')
 remplace('settings.py',"'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),","'NAME':  " + nomApp + " \n
      'USER':  " + userdb + " \n'PASSWORD':  " + passdb1 + " \n 'HOST' : 'localhost',  'PORT': '', ")
