@@ -1,0 +1,718 @@
+#! /bin/bash
+########################################################################################
+## Gracias ezeaguerre; ScrewFace; Chiche-O_o; Juan64Bits; tRaCk3r x la ayuda brindada ##
+## x aqui venenoDcuba saludos y mis respetos   
+## Scrip creado por yubde
+## Fuente http://www.laneros.com/temas/scrip-para-instalar-o-configurar-dns-bind9.165533/
+########################################################################################
+#-----------Estableciendo variables
+dir=/etc/bind/dnsdata
+dir1=/etc/bind
+ncl=named.conf.local
+nco=named.conf.options
+bd="sudo /etc/init.d/bind9 restart"
+#-----------Selección de idioma
+clear
+while true ; do
+echo '##############################################'
+echo '##    VNbind9-tool   yuyubades@yahoo.es     ##'
+echo '##############################################'
+echo " "
+read -p "(1)-ESP  (2)-ENG: " lang
+case $lang in
+#-----------En Español
+ 1)
+   clear
+   while true ; do
+   #--------Menu
+   echo '##############################################'
+   echo '##    VNbind9-tool   yuyubades@yahoo.es     ##'
+   echo '##############################################'
+   echo " "
+   echo "(1)-Configurar por primera ves"
+   echo "(2)-Listar zonas existentes"
+   echo "(3)-Agregar registro a zona existente"
+   echo "(4)-Agregar zona nueva"
+   echo "(5)-Reenviadores"
+   echo " "
+   echo "(6)-Editar $nco"
+   echo "(7)-Editar $ncl"
+   echo " "
+   echo "(i)-Instalar servidor Bind9"
+   echo " "
+   echo "(z)-Borrar una zona específica"
+   echo "(d)-Borrar todas las zonas y configuraciones"
+   echo "(x)-Salir"
+   echo " "
+   read -p "Seleccione una opción: " menu
+     case $menu in
+     1)       
+      if [ -d "$dir1" ]; then
+         if [ ! -d "$dir" ]; then
+           sudo mkdir $dir
+         fi
+      clear
+      sudo chmod 777 $dir1/$ncl
+      echo "----------------------------------------------"
+      echo "Creando zona"
+      echo "----------------------------------------------"
+      echo "Ruta a las cfg de las zonas: "
+      echo "$dir/"
+      echo "Ruta a la cfg de la busqueda inversa: "
+      echo "$dir1/reverse"
+      echo "----------------------------------------------"
+      read -p "Ingrese el nombre de la zona: " dname
+      echo "Ingrese la IP para esta zona, ejemplo:"
+      echo "xx1= 192"
+      echo "xx2= 168"
+      echo "xx3= 1"
+      echo "xx4= 1"
+      echo "----------------------------------------------"
+      read -p "xx1: " xx1
+      read -p "xx2: " xx2
+      read -p "xx3: " xx3
+      read -p "xx4: " xx4
+      echo "#generado por vndns escrito x venenodcuba" > $dir1/$ncl
+      echo "#mantener la forma de la cfg al usar el script" >> $dir1/$ncl
+      echo zone \"$dname\" { >> $dir1/$ncl "type master; file \"$dir/$dname\"; };" >> $dir1/$ncl
+      sudo cp $dir1/db.local $dir/$dname
+      sudo chmod 777 $dir/$dname
+      echo \$TTL 604800 > $dir/$dname
+      echo \@ IN SOA $dname. root.$dname. \( >> $dir/$dname
+      echo 2 \; Serial >> $dir/$dname
+      echo 604800 \; Refresh >> $dir/$dname
+      echo 86400 \; Retry >> $dir/$dname
+      echo 2419200 \; Expire >> $dir/$dname
+      echo 604800 \) \; Negative Cache TTL >> $dir/$dname
+      echo \; >> $dir/$dname
+      echo \@ IN NS $dname. >> $dir/$dname
+      echo \@ IN A $xx1.$xx2.$xx3.$xx4 >> $dir/$dname
+      sudo chmod 644 $dir/$dname
+      #-----------Reverse
+      echo "----------------------------------------------"
+      echo "Creando zona de busqueda inversa"
+      echo "----------------------------------------------"
+      sleep 0,3
+      echo zone "\"$xx3.$xx2.$xx1.in-addr.arpa\" { type master; file \"$dir1/reverse\"; };" >> $dir1/$ncl
+      sudo chmod 644 $dir1/$ncl
+      sudo cp $dir1/db.127 $dir1/reverse
+      sudo chmod 777 $dir1/reverse
+      echo \$TTL 604800 > $dir1/reverse
+      echo \@ IN SOA $dname. root.$dname. \( >> $dir1/reverse
+      echo 2 \; Serial >> $dir1/reverse
+      echo 604800 \; Refresh >> $dir1/reverse
+      echo 86400 \; Retry >> $dir1/reverse
+      echo 2419200 \; Expire >> $dir1/reverse
+      echo 604800 \) \; Negative Cache TTL >> $dir1/reverse
+      echo \; >> $dir1/reverse
+      echo \@ IN NS $dname. >> $dir1/reverse
+      echo $xx4 IN PTR svr-$dname. >> $dir1/reverse
+      sudo chmod 644 $dir1/reverse
+      $bd
+      clear 
+      else
+      clear
+      echo "----------------------------------------------"
+      echo "Servidor DNS Bind9 no se encuentra instalado"
+      fi
+      ;;
+     2)
+      clear
+        if [ -d "$dir" ] ; then
+          echo "----------------------------------------------"
+          echo "Lista de zonas existentes: "
+          ls $dir
+        else
+          echo "----------------------------------------------"
+          echo "No existe zona alguna"
+        fi
+      ;;
+     3)
+      clear
+        if [ -d "$dir" ] ; then
+          echo "----------------------------------------------"
+          echo "Agregar registro a zona existente"
+          echo "----------------------------------------------"
+          echo "Lista de zonas disponibles:"
+          ls $dir
+          echo "----------------------------------------------"
+          read -p "Ingrese nombre de la zona: " reg3
+          sudo chmod 777 $dir/$reg3
+          read -p "Nombre host (www,mail,foro,etc...): " host3
+          read -p "Tipo de registro (A,MX,CNAME,ETC...): " tip3
+          read -p "Dirección IP para $host3.$reg3: " ip3
+          echo $host3 IN $tip3 $ip3 >> $dir/$reg3
+          sudo chmod 644 $dir/$reg3
+          $bd
+          clear
+        else
+          echo "----------------------------------------------"
+          echo "No existe zona alguna para agregar registro"
+        fi         
+      ;;
+     4)
+      clear
+        if [ -d $dir ] ; then
+          echo "----------------------------------------------"
+          echo "Agregar zona nueva"
+          echo "----------------------------------------------"
+          echo "Lista de zonas existentes:"
+          ls $dir
+          echo "----------------------------------------------"
+          echo -n "Ingrese el nombre para la nueva zona: "
+          read name4
+          echo "Ingrese la IP para esta zona, ejemplo:"
+          echo "xx1= 192"
+          echo "xx2= 168"
+          echo "xx3= 1"
+          echo "xx4= 1"
+          echo "----------------------------------------------"
+          read -p "xx1: " x1
+          read -p "xx2: " x2
+          read -p "xx3: " x3
+          read -p "xx4: " x4
+          sudo chmod 777 $dir1/$ncl
+          echo zone "\"$name4\" { type master; file \"$dir/$name4\"; };" >> $dir1/$ncl
+          sudo chmod 644 $dir1/$ncl
+          sudo cp $dir1/db.local $dir/$name4
+          sudo chmod 777 $dir/$name4
+          echo \$TTL 604800 > $dir/$name4
+          echo \@ IN SOA $name4. root.$name4. \( >> $dir/$name4
+          echo 2 \; Serial >> $dir/$name4
+          echo 604800 \; Refresh >> $dir/$name4
+          echo 86400 \; Retry >> $dir/$name4
+          echo 2419200 \; Expire >> $dir/$name4
+          echo 604800 \) \; Negative Cache TTL >> $dir/$name4
+          echo \; >> $dir/$name4
+          echo \@ IN NS $name4. >> $dir/$name4
+          echo \@ IN A $x1.$x2.$x3.$x4 >> $dir/$name4
+          sudo chmod 644 $dir/$name4
+          $bd
+          clear
+        else
+          echo "----------------------------------------------"
+          echo "No existe una configuración básica"
+          echo "por favor utilice la primera opción"
+        fi
+      ;;
+     5)
+      if [ -d "$dir1" ]; then
+      clear
+      while true ; do
+      echo "##############################################"
+      echo "## Reenviadores                             ##"
+      echo "## para borrar los reenviadores y agregar   ##"
+      echo "## uno nuevo seleccione opción 1            ##" 
+      echo "##############################################"
+      echo " "
+      echo "(1)-Por primera ves"
+      echo "(2)-Listar"
+      echo "(3)-Agregar"
+      echo "(4)-Sustituir"
+      echo " "
+      echo "(x)-Salir al menu principal"
+      echo " "
+      echo "----------------------------------------------"
+      read -p "Seleccione una opción: " frwd
+       case $frwd in
+         1)
+          sudo chmod 777 $dir1/$nco
+          read -p "IP del reenviador: " frwdip
+          echo "#generado por vndns escrito x venenodcuba" > $dir1/$nco
+          echo "#mantener la forma de la cfg al usar el script" >> $dir1/$nco
+          echo options "{" >> $dir1/$nco
+          echo directory \"/var/cache/bind\"\; >> $dir1/$nco
+          echo dnssec-enable yes\; >> $dir1/$nco
+          echo forwarders "{ $frwdip; };" >> $dir1/$nco
+          echo auth-nxdomain no\; >> $dir1/$nco
+          echo "};" >> $dir1/$nco
+          sudo chmod 644 $dir1/$nco
+          $bd
+          clear
+          ;;
+         2)
+          clear
+          echo "----------------------------------------------"
+          echo "Reenviadores existentes"
+          grep forwarders $dir1/$nco
+          ;;
+         3)
+          clear
+          echo "----------------------------------------------"
+          echo "Agregar reenviador"
+          echo "----------------------------------------------"
+          echo "Reenviadores existentes"
+          grep forwarders $dir1/$nco
+          echo "----------------------------------------------"
+          read -p "IP del nuevo reenviador: " frwdipn
+          sudo chmod 777 $dir1/$nco
+          find $dir1/$nco | sudo xargs perl -pi -e s/"; };"/"; $frwdipn; };"/g
+          sudo chmod 644 $dir1/$nco
+          $bd
+          clear
+          ;;
+         4)
+          clear
+          sudo chmod 777 $dir1/$nco
+          echo "----------------------------------------------"
+          echo "Sustituir reenviador"
+          echo "----------------------------------------------"
+          echo "Reenviadores existentes"
+          grep forwarders $dir1/$nco
+          echo "----------------------------------------------"
+          read -p "Dirección ip a sustituir: " susip
+          read -p "Dirección ip nueva: " nwips
+          find $dir1/$nco | sudo xargs perl -pi -e s/$susip/$nwips/g
+          sudo chmod 644 $dir1/$nco
+          $bd
+          clear
+          ;;
+         x)
+          clear
+          break
+          ;;
+         *)
+          clear
+          echo "----------------------------------------------"
+          echo "Seleeción no válida !"
+          ;;
+          esac
+          done
+       else
+          clear
+          echo "----------------------------------------------"
+          echo "Servidor DNS Bind9 no se encuentra instalado"
+       fi
+      ;;
+     i)
+      clear
+      sudo aptitude update
+      sudo aptitude install bind9 bind9utils bind9-host bind9-doc
+      clear
+      ;;
+     6)
+       if [ -e /bin/nano ]; then 
+         sudo nano $dir1/$nco
+         $bd
+         clear
+       else
+         echo "El editor usado por este script es el nano"
+       fi
+     ;;
+     7)
+       if [ -e /bin/nano ]; then
+         sudo nano $dir1/$ncl
+         clear
+         $bd
+       else
+         echo "El editor usado por este script es el nano"
+       fi
+     ;;
+     z)
+      clear
+        if [ -d "$dir" ] ; then
+          echo "----------------------------------------------"
+          echo "Lista de zonas existentes: "
+          ls $dir
+          echo "----------------------------------------------"
+          read  -p "Ingrese zona para borrar: " zdel
+           if [ -e "$dir/$zdel" ] ; then
+             sudo chmod 777 $dir1/$ncl
+                if [ ! -d "$dir1/dtemp" ]; then
+                   sudo mkdir $dir1/dtemp
+                fi
+             sudo cp $dir1/$ncl $dir1/dtemp/ncltemp
+             sudo chmod 777 $dir1/dtemp/ncltemp
+             cat "$dir1/$ncl" | grep -v "$zdel" > $dir1/dtemp/ncltemp
+             sudo rm $dir1/$ncl
+             sudo cp $dir1/dtemp/ncltemp $dir1/$ncl
+             sudo rm -r $dir1/dtemp
+             sudo rm $dir/$zdel
+             sudo chmod 644 $dir1/$ncl
+             $bd
+             clear
+             echo "Zona borrada con exito"
+           else
+             clear
+             echo "----------------------------------------------"
+             echo "Zona no válida"
+           fi 
+        else
+          echo "----------------------------------------------"
+          echo "No existe zona alguna"
+        fi
+      ;;
+     d)
+      clear
+        if [ -d "$dir" ] ; then
+          sudo rm -r $dir
+          sudo rm $dir1/reverse
+          sudo chmod 777 $dir1/$ncl
+          echo " " > $dir1/$ncl
+          sudo chmod 644 $dir1/$ncl
+          echo "----------------------------------------------"
+          echo "Configuración borrada con exito"
+        else
+          echo "----------------------------------------------"
+          echo "No existe configuración o zona para borrar"
+        fi
+      ;;
+     x)
+      clear
+      exit
+      ;;
+     *)
+      echo "Seleeción no válida !"
+      ;;
+     esac
+   done
+;;
+#--------En ingles
+ 2)
+   clear
+   while true ; do
+   #--------Menu
+   echo '##############################################'
+   echo '##    VNbind9-tool   yuyubades@yahoo.es     ##'
+   echo '##############################################'
+   echo " "
+   echo "(1)-First time configuration"
+   echo "(2)-List existent zones"
+   echo "(3)-Adding record to existent zone"
+   echo "(4)-Add new zone"
+   echo "(5)-Forwardes"
+   echo " "
+   echo "(6)-Edit $nco"
+   echo "(7)-Edit $ncl"
+   echo " "
+   echo "(i)-Instal DNS server Bind9"
+   echo " "
+   echo "(z)-Erasing specific zone"
+   echo "(d)-Erase all configuration"
+   echo "(x)-Exit"
+   echo " "
+   read -p "Select an option: " menu
+     case $menu in
+     1)
+      clear
+      if [ -d "$dir1" ]; then
+         if [ ! -d "$dir" ]; then
+           sudo mkdir $dir
+         fi
+      sudo chmod 777 $dir1/$ncl
+      echo "----------------------------------------------"
+      echo "Creating zone"
+      echo "----------------------------------------------"
+      echo "Path to cfg zones: "
+      echo "$dir/"
+      echo "Path to cfg reverse zone: "
+      echo "$dir1/reverse"
+      echo "----------------------------------------------"
+      read -p "Insert name of new zone: " dname
+      echo "IP address for zone, example:"
+      echo "xx1= 192"
+      echo "xx2= 168"
+      echo "xx3= 1"
+      echo "xx4= 1"
+      echo "----------------------------------------------"
+      read -p "xx1: " xx1
+      read -p "xx2: " xx2
+      read -p "xx3: " xx3
+      read -p "xx4: " xx4
+      echo "#generado por vnbind escrito x venenodcuba" > $dir1/$ncl
+      echo zone \"$dname\" { >> $dir1/$ncl "type master; file \"$dir/$dname\"; };" >> $dir1/$ncl
+      sudo cp $dir1/db.local $dir/$dname
+      sudo chmod 777 $dir/$dname
+      echo \$TTL 604800 > $dir/$dname
+      echo \@ IN SOA $dname. root.$dname. \( >> $dir/$dname
+      echo 2 \; Serial >> $dir/$dname
+      echo 604800 \; Refresh >> $dir/$dname
+      echo 86400 \; Retry >> $dir/$dname
+      echo 2419200 \; Expire >> $dir/$dname
+      echo 604800 \) \; Negative Cache TTL >> $dir/$dname
+      echo \; >> $dir/$dname
+      echo \@ IN NS $dname. >> $dir/$dname
+      echo \@ IN A $xx1.$xx2.$xx3.$xx4 >> $dir/$dname
+      sudo chmod 644 $dir/$dname
+      #-----------Reverse
+      echo "----------------------------------------------"
+      echo "Creating reverse zone"
+      echo "----------------------------------------------"
+      sleep 0,3
+      echo zone "\"$xx3.$xx2.$xx1.in-addr.arpa\" { type master; file \"$dir1/reverse\"; };" >> $dir1/$ncl
+      sudo chmod 644 $dir1/$ncl
+      sudo cp $dir1/db.127 $dir1/reverse
+      sudo chmod 777 $dir1/reverse
+      echo \$TTL 604800 > $dir1/reverse
+      echo \@ IN SOA $dname. root.$dname. \( >> $dir1/reverse
+      echo 2 \; Serial >> $dir1/reverse
+      echo 604800 \; Refresh >> $dir1/reverse
+      echo 86400 \; Retry >> $dir1/reverse
+      echo 2419200 \; Expire >> $dir1/reverse
+      echo 604800 \) \; Negative Cache TTL >> $dir1/reverse
+      echo \; >> $dir1/reverse
+      echo \@ IN NS $dname. >> $dir1/reverse
+      echo $xx4 IN PTR svr-$dname. >> $dir1/reverse
+      sudo chmod 644 $dir1/reverse
+      $bd
+      clear 
+      else
+      clear
+      echo "----------------------------------------------"
+      echo "DNS server Bind9 it's not instaled"
+      fi
+      ;;
+     2)
+      clear
+        if [ -d "$dir" ] ; then
+          echo "----------------------------------------------"
+          echo "List existent zones:"
+          ls $dir
+        else
+          echo "----------------------------------------------"
+          echo "Not exist zone"
+        fi
+      ;;
+     3)
+      clear
+        if [ -d "$dir" ] ; then
+          echo "----------------------------------------------"
+          echo "Adding record to existent zone"
+          echo "----------------------------------------------"
+          echo "List existent zones:"
+          ls $dir
+          echo "----------------------------------------------"
+          read -p "Select zone to add record: " reg3
+          sudo chmod 777 $dir/$reg3
+          read -p "Host name (www,mail,foro,etc...): " host3
+          read -p "Type (A,MX,CNAME,ETC...): " tip3
+          read -p "Ip for $host3.$reg3: " ip3
+          echo $host3 IN $tip3 $ip3 >> $dir/$reg3
+          sudo chmod 644 $dir/$reg3
+          $bd
+          clear
+        else
+          echo "----------------------------------------------"
+          echo "No exist zone to add record"
+        fi
+      ;;
+     4)
+      clear
+        if [ -d $dir ] ; then
+          echo "----------------------------------------------"
+          echo "Add new zone"
+          echo "----------------------------------------------"
+          echo "List existent zones:"
+          ls $dir
+          echo "----------------------------------------------"
+          echo -n "Insert name of new zone: "
+          read name4
+          echo "IP address for zone, example:"
+          echo "xx1= 192"
+          echo "xx2= 168"
+          echo "xx3= 1"
+          echo "xx4= 1"
+          echo "----------------------------------------------"
+          read -p "xx1: " x1
+          read -p "xx2: " x2
+          read -p "xx3: " x3
+          read -p "xx4: " x4
+          sudo chmod 777 $dir1/$ncl
+          echo zone "\"$name4\" { type master; file \"$dir/$name4\"; };" >> $dir1/$ncl
+          sudo chmod 644 $dir1/$ncl
+          sudo cp $dir1/db.local $dir/$name4
+          sudo chmod 777 $dir/$name4
+          echo \$TTL 604800 > $dir/$name4
+          echo \@ IN SOA $name4. root.$name4. \( >> $dir/$name4
+          echo 2 \; Serial >> $dir/$name4
+          echo 604800 \; Refresh >> $dir/$name4
+          echo 86400 \; Retry >> $dir/$name4
+          echo 2419200 \; Expire >> $dir/$name4
+          echo 604800 \) \; Negative Cache TTL >> $dir/$name4
+          echo \; >> $dir/$name4
+          echo \@ IN NS $name4. >> $dir/$name4
+          echo \@ IN A $x1.$x2.$x3.$x4 >> $dir/$name4
+          sudo chmod 644 $dir/$name4
+          $bd
+          clear
+        else
+          echo "----------------------------------------------"
+          echo "A basic configuration does not exist"
+          echo "please use the first option"
+        fi
+      ;;
+     5)
+      if [ -d "$dir1" ]; then
+      clear
+      while true ; do
+      echo "##############################################"
+      echo "## Forwarders                               ##"
+      echo "## to clear all forwarders and add new      ##"
+      echo "## select opcion 1                          ##"
+      echo "##############################################"
+      echo " "
+      echo "(1)-First configuration"
+      echo "(2)-List existent forwarders"
+      echo "(3)-Add new"
+      echo "(4)-Replace"
+      echo " "
+      echo "(x)-Main menu"
+      echo " "
+      echo "----------------------------------------------"
+      read -p "Select an option: " frwd
+       case $frwd in
+         1)
+          sudo chmod 777 $dir1/$nco
+          read -p "Forwarder ip address: " frwdip
+          echo options "{" > $dir1/$nco
+          echo directory \"/var/cache/bind\"\; >> $dir1/$nco
+          echo dnssec-enable yes\; >> $dir1/$nco
+          echo forwarders "{ $frwdip; };" >> $dir1/$nco
+          echo auth-nxdomain no\; >> $dir1/$nco
+          echo "};" >> $dir1/$nco
+          sudo chmod 644 $dir1/$nco
+          $bd
+          clear
+          ;;
+         2)
+          clear
+          echo "----------------------------------------------"
+          echo "Existent forwarders"
+          grep forwarders $dir1/$nco
+          ;;
+         3)
+          clear
+          echo "----------------------------------------------"
+          echo "Add forwarder"
+          echo "----------------------------------------------"
+          echo "Existent forwarders"
+          grep forwarders $dir1/$nco
+          echo "----------------------------------------------"
+          read -p "IP address of new forwarder: " frwdipn
+          sudo chmod 777 $dir1/$nco
+          find $dir1/$nco | sudo xargs perl -pi -e s/"; };"/"; $frwdipn; };"/g
+          sudo chmod 644 $dir1/$nco
+          $bd
+          clear
+          ;;
+         4)
+          clear
+          sudo chmod 777 $dir1/$nco
+          echo "----------------------------------------------"
+          echo "Replace forwarder"
+          echo "----------------------------------------------"
+          echo "Existent forwarders"
+          grep forwarders $dir1/$nco
+          echo "----------------------------------------------"
+          read -p "Ip address to replace: " susip
+          read -p "New ip address: " nwips
+          find $dir1/$nco | sudo xargs perl -pi -e s/$susip/$nwips/g
+          sudo chmod 644 $dir1/$nco
+          $bd
+          clear
+          ;;
+         x)
+          clear
+          break
+          ;;
+         *)
+          clear
+          echo "----------------------------------------------"
+          echo "NO valid selecction !"
+          ;;
+         esac
+       done
+       else
+          clear
+          echo "----------------------------------------------"
+          echo "DNS server Bind9 it's not instaled"
+          fi
+         ;;
+     i)
+      clear
+      sudo aptitude update
+      sudo aptitude install bind9 bind9utils bind9-host bind9-doc
+      clear
+      ;;
+     6) 
+       if [ -e /bin/nano ]; then
+         sudo nano $dir1/$nco
+         $bd
+         clear
+       else
+         echo "This script use nano has default edit tool"
+       fi
+     ;;
+     7)
+       if [ -e /bin/nano ]; then
+         sudo nano $dir1/$ncl
+         clear
+         $bd
+       else
+         echo "This script use nano has default edit tool"
+       fi
+     ;;
+     z)
+      clear
+        if [ -d "$dir" ] ; then
+          echo "----------------------------------------------"
+          echo "List existent zones: "
+          ls $dir
+          echo "----------------------------------------------"
+          read  -p "Insert zone to erase: " zdel
+           if [ -e "$dir/$zdel" ] ; then
+             sudo chmod 777 $dir1/$ncl
+                if [ ! -d "$dir1/dtemp" ]; then
+                   sudo mkdir $dir1/dtemp
+                fi
+             sudo cp $dir1/$ncl $dir1/dtemp/ncltemp
+             sudo chmod 777 $dir1/dtemp/ncltemp
+             cat "$dir1/$ncl" | grep -v "$zdel" > $dir1/dtemp/ncltemp
+             sudo rm $dir1/$ncl
+             sudo cp $dir1/dtemp/ncltemp $dir1/$ncl
+             sudo rm -r $dir1/dtemp
+             sudo rm $dir/$zdel
+             sudo chmod 644 $dir1/$ncl
+             $bd
+             clear
+             echo "Zone erased successfully"
+           else
+             clear
+             echo "----------------------------------------------"
+             echo "No valid zone"
+           fi 
+        else
+          echo "----------------------------------------------"
+          echo "Zone to erase does not exist"
+        fi
+      ;;
+     d)
+      clear
+        if [ -d "$dir" ] ; then
+          sudo rm -r $dir
+          sudo rm $dir1/reverse
+          sudo chmod 777 $dir1/$ncl
+          echo " " > $dir1/$ncl
+          sudo chmod 644 $dir1/$ncl
+          echo "----------------------------------------------"
+          echo "Configuration erased successfully"
+         else
+          echo "----------------------------------------------"
+          echo "Not exist configuration or zone to erase"
+         fi
+      ;;
+     x)
+      clear
+      exit
+      ;;
+     *)
+      echo "NO valid selecction !"
+      ;;
+     esac
+   done
+ ;;
+ *)
+  echo "UPS !!!"
+ ;;
+ esac
+done
