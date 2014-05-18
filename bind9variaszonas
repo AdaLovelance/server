@@ -1,0 +1,98 @@
+#!/bin/bash
+#
+#Configuro varios dominios desde un fichero y la inversa del primero
+#Kao 2014
+
+#recogida de variables
+read -p "Introduce el primer ns: " ns1
+read -p "Introduce el segundo ns: " ns2
+read -p "Introduce la ip del servidor bind: " ip
+read -p "Introduce la ip del dns secundario: " ip2
+read -p "Introduce el correo electrónico: " mail
+
+
+#Las zonas se configuran en /etc/bind/named.conf.local
+
+namedLo="/etc/bind/named.conf.local"
+
+read -p "Introduce la ruta del fichero donde están lo dominios a configurar: " dominios
+
+for i in $(cat < $dominios)
+    do
+    cat >> $namedLo <<EOF
+        zone "$i" {
+             type master;
+             allow-transfer {$ip2;};
+             file "/etc/bind/zones/db.$i";
+        };
+EOF
+
+mkdir /etc/bind/zones
+cat > /etc/bind/zones/db.$i <<EOF
+
+\$TTL        3600
+@       IN      SOA     $ns1. $mail. (
+                        2013011703       ; serial, todays date + todays serial #
+                        7200              ; refresh, seconds
+                        540              ; retry, seconds
+                        604800              ; expire, seconds
+                        86400 )            ; minimum, seconds
+;
+
+$i. 3600 A        $ip
+$i. 3600      MX    10   mail.$i.
+$i. 3600      NS        $ns1.
+$i. 3600      NS        $ns2.
+mail 3600 A        $ip
+www 3600 A         $ip
+
+EOF
+echo "Zonas configuradas."
+
+done
+read -p  "¿configurar la zona inversa?[s/n]: " respuesta
+
+if ["$respuesta" = "n"]; then
+        echo "Gracias por utilizar este script, se feliz"|break
+fi
+
+if ["$respuesta" = "s"]; then
+read -p "Escribe el dominio de la zona a configurar: " dominio
+
+
+#Separación de la ip en octetos
+oct1=$(echo $ip | cut -d. -f1).
+oct2=$(echo $ip | cut -d. -f2).
+oct3=$(echo $ip | cut -d. -f3).
+oct4=$(echo $ip | cut -d. -f4)
+
+
+touch /etc/bind/zones/db.$oct3$oct2$oct1.in-addr.arpa
+
+#configuración en named.conf.local
+
+cat >> $namedLo << EOF
+
+zone "$oct3$oct2$oct1.in-addr.arpa" {
+        type master;
+        file "/etc/bind9/zones/db.$oct3$oct2$oct1.in-addr.arpa";
+};
+
+EOF
+
+cat > "/etc/bind/zones/db.$oct3$oct2$oct1.in-addr.arpa" <<EOF
+
+@       IN      SOA     $ns1. $mail. (
+                        2014021001       ; serial, todays date + todays serial #
+                        7200              ; refresh, seconds
+                        540              ; retry, seconds
+                        604800              ; expire, seconds
+                        86400 )            ; minimum, seconds
+;
+  NS      $ns1.
+  NS      $ns2.
+
+$oct4  PTR $dominio
+EOF
+
+fi
