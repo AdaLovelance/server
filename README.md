@@ -1,5 +1,3 @@
 server
 ======
-
-Lo que surgió del día que me pregunté cuantas capas podía tener la cebolla
-y lo que fué surgiendo de mis días porteriores de trabajo diario
+Este repositorio es una recopilación de scripts hecho en el trabajo del día a día para no tener que repetir las mismas configuraciones siempre.
