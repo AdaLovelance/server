@@ -28,7 +28,7 @@ aptitude install postfix postfix-mysql dovecot-core dovecot-imapd dovecot-pop3d 
 service postfix stop
 service dovecot stop
 
-sleep 4
+sleep 2
 
 read -s -p "Introduzca clave de root de mariaDB: " passmariadb
 echo -e "\n"
@@ -38,19 +38,16 @@ echo "CREATE DATABASE mailserver;" | mysql -uroot -p$passmariadb
 
 read -s -p "Invente una clave para la usuaria mailuser: " respuestamailuser
 echo -e "\nCreando usuaria mailuser...\n"
-echo "GRANT SELECT ON mailserver.* TO 'mailuser'@'127.0.0.1' IDENTIFIED BY '$respuestamailuser'; FLUSH PRIVILEGES;" | mysql -uroot -p$passmariadb
 
+#Creación de usuario y tablas en la bd
+mysql -uroot -p$passmariadb << EOF
+USE mailserver;
+GRANT SELECT ON mailserver.* TO 'mailuser'@'127.0.0.1' IDENTIFIED BY '$respuestamailuser'; FLUSH PRIVILEGES;
+CREATE TABLE mailserver.virtual_domains (id int(11) NOT NULL auto_increment,name varchar(50) NOT NULL,PRIMARY KEY (id)) ENGIN$
+CREATE TABLE mailserver.virtual_users (id int(11) NOT NULL auto_increment,domain_id int(11) NOT NULL,password varchar(106) NO$
+CREATE TABLE mailserver.virtual_aliases (id int(11) NOT NULL auto_increment,domain_id int(11) NOT NULL,source varchar(100) NO$
+EOF
 
-
-# CREACIÓN de TABLAS
-echo -e "Creando tabla virtual_domains... \n"
-echo "CREATE TABLE mailserver.virtual_domains (id int(11) NOT NULL auto_increment,name varchar(50) NOT NULL,PRIMARY KEY (id)) ENGINE=InnoDB DEFAULT CHARSET=utf8;" | mysql -uroot -p$passmariadb
-
-echo -e "Creando tabla virtual_users... \n"
-echo "CREATE TABLE mailserver.virtual_users (id int(11) NOT NULL auto_increment,domain_id int(11) NOT NULL,password varchar(106) NOT NULL,email varchar(100) NOT NULL, PRIMARY KEY (id), UNIQUE KEY email (email), FOREIGN KEY (domain_id) REFERENCES virtual_domains(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8;" | mysql -uroot -p$passmariadb
-
-echo -e "Creando tabla virtual_aliases... \n"
-echo "CREATE TABLE mailserver.virtual_aliases (id int(11) NOT NULL auto_increment,domain_id int(11) NOT NULL,source varchar(100) NOT NULL,destination TEXT NOT NULL, PRIMARY KEY (id), FOREIGN KEY (domain_id) REFERENCES virtual_domains(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8;" | mysql -uroot -p$passmariadb
 
 echo -n "Introduzca nombre de dominio para su correo [ejemplo.net]: "
 read respuestadominio
