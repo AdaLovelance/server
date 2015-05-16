@@ -1,35 +1,23 @@
 #!/bin/bash
-#Script de instalación y configuración de servidor de correo con vusers, vdomains y valias, primera versión.
+#Script de instalación y configuración de servidor de correo con vusers, vdomains y valias.
+#ESTE SCRIPT DEBE EJECUTARSE: bash correo.sh de otro modo dará ciertos errores por incompatibilidad de sintáxis.
 #Licencia GPL. K.
 #Debian 7 fuente de referencia: https://library.linode.com/email/postfix/postfix2.9.6-dovecot2.0.19-mysql 
 
-#Instalación de Mariadb https://downloads.mariadb.org/mariadb/repositories/#mirror=somerset&distro=Debian&distro_release=wheezy&version=5.5
+#Instalación de Mariadb
 echo -n "Instalar mariadb?[s/n]: "
 read respuestamaria
 if [ "$respuestamaria" = "s" ]; then
-	echo -e "Añadiendo repositorios MariaDB...\n"
-	echo "deb http://mirror.stshosting.co.uk/mariadb/repo/10.0/debian wheezy main" >> /etc/apt/sources.list
-	echo "deb-src http://mirror.stshosting.co.uk/mariadb/repo/10.0/debian wheezy main" >> /etc/apt/sources.list
-	echo -e "Añadiendo clave GPG repositorios...\n"
-	apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db 
-	echo -e "Actualizando repositorios...\n"
-	aptitude update
-	echo -e "Instalando cosas...\n"
-	aptitude install python-software-properties
 	aptitude install mariadb-server
 fi
 
-
 # Instala postfix y dovecot con soporte para mariadb
-# https://library.linode.com/email/postfix/postfix2.9.6-dovecot2.0.19-mysql
-# di si por defecto: aptitude install --y loquequierainstalar
-
 aptitude install postfix postfix-mysql dovecot-core dovecot-imapd dovecot-pop3d dovecot-lmtpd dovecot-mysql openssl
 service postfix stop
 service dovecot stop
 
 sleep 2
-
+#Configuración de la base de datos del correo
 read -s -p "Introduzca clave de root de mariaDB: " passmariadb
 echo -e "\n"
 
