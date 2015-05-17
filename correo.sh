@@ -27,7 +27,7 @@ echo "CREATE DATABASE mailserver;" | mysql -uroot -p$passmariadb
 read -s -p "Invente una clave para la usuaria mailuser: " respuestamailuser
 echo -e "\nCreando usuaria mailuser...\n"
 
-#Creación de usuario y tablas en la bd
+#Creación de usuario de mysql y tablas en la bd
 mysql -uroot -p$passmariadb << EOF
 USE mailserver;
 GRANT SELECT ON mailserver.* TO 'mailuser'@'127.0.0.1' IDENTIFIED BY '$respuestamailuser'; FLUSH PRIVILEGES;
@@ -36,19 +36,16 @@ CREATE TABLE mailserver.virtual_users (id int(11) NOT NULL auto_increment,domain
 CREATE TABLE mailserver.virtual_aliases (id int(11) NOT NULL auto_increment,domain_id int(11) NOT NULL,source varchar(100) NO$
 EOF
 
-
-echo -n "Introduzca nombre de dominio para su correo [ejemplo.net]: "
-read respuestadominio
-echo "INSERT INTO mailserver.virtual_domains(name) VALUES('$respuestadominio');" | mysql -uroot -p$passmariadb
-echo -e "\nDominio $respuestadominio insertado... \n"
-
-echo -n "Introduzca su dirección de correo a crear [pepi@$respuestadominio]: "
-read respuestacorreo
-echo -e "\n"
-
+read -p "Introduzca nombre de dominio para su correo [ejemplo.net]: " respuestadominio
+read -p "Introduzca su dirección de correo a crear [pepi@$respuestadominio]: " respuestacorreo
 read -s -p "Invente una clave para $respuestacorreo: " passcorreo
-echo "INSERT INTO mailserver.virtual_users(domain_id, password, email) VALUES('1', ENCRYPT('$passcorreo', CONCAT('\$6\$', SUBSTRING(SHA(RAND()), -16))), '$respuestacorreo');" | mysql -uroot -p$passmariadb
-echo -e "\nCreando cuenta de correo $respuestacorreo...\n"
+
+#Creando dominio y cuenta de correo principal
+mysql -uroot -p$passmariadb << EOF
+USE mailserver;
+INSERT INTO mailserver.virtual_domains(name) VALUES('$respuestadominio');
+INSERT INTO mailserver.virtual_users(domain_id, password, email) VALUES('1', ENCRYPT('$passcorreo', CONCAT('\$6\$', SUBSTRING(SHA(RAND()), -16))), '$respuestacorreo');
+EOF
 
 
 echo -e "Generando certificado y asignación de permisos...\n"
@@ -56,13 +53,16 @@ openssl req -new -newkey rsa:4096 -days 3650 -nodes -x509 -subj "/C=NO/ST=Denial
 chmod o= /etc/dovecot/private/dovecot.pem
 echo -e "Certificado generado\n"
 
-
+#Instalación de amavis
+echo "ahora instalaremos amavis para dejar hecha la configuración del mismo en los ficheros de postfix y dovecot correspondientes"
+echo $respuestadominio > /etc/hostname
+aptitude install amavis
 
 ### POSTFIX ################################################################################################
 
 echo -e "Configurando Postfix\n"
 
-mv /etc/postfix/main.cf /etc/postfix/main.cf.backup
+mv /etc/postfix/main.cf /etc/postfix/main.cf.original
 
 cat > /etc/postfix/main.cf <<EOF
 # See /usr/share/postfix/main.cf.dist for a commented, more complete version
@@ -70,32 +70,82 @@ cat > /etc/postfix/main.cf <<EOF
 # line of that file to be used as the name.  The Debian default
 # is /etc/mailname.
 #myorigin = /etc/mailname
-smtpd_banner = \$myhostname ESMTP \$mail_name
+smtpd_banner = $myhostname ESMTP $mail_name
 biff = no
+
 # appending .domain is the MUA's job.
 append_dot_mydomain = no
+
 # Uncomment the next line to generate "delayed mail" warnings
 #delay_warning_time = 4h
 readme_directory = no
+
 # TLS parameters
 #smtpd_tls_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
 #smtpd_tls_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
 #smtpd_use_tls=yes
-#smtpd_tls_session_cache_database = btree:${data_directory}/smtpd_scache
-#smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
-#en debian los certificados están en /etc/dovecot/dovecot.pem y /etc/dovecot/private/dovecot.pem
+#smtpd_tls_session_cache_database = btree:/smtpd_scache
+#smtp_tls_session_cache_database = btree:/smtp_scache
+
 smtpd_tls_cert_file=/etc/dovecot/dovecot.pem
 smtpd_tls_key_file=/etc/dovecot/private/dovecot.pem
 smtpd_use_tls=yes
 smtpd_tls_auth_only = yes
+smtp_use_tls = yes
+
 #Enabling SMTP for authenticated users, and handing off authentication to Dovecot
 smtpd_sasl_type = dovecot
 smtpd_sasl_path = private/auth
 smtpd_sasl_auth_enable = yes
+smtpd_sasl_local_domain = $respuestadominio
+smtpd_sasl_security_options = noanonymous
+
+#CONFIGURACION MANUAL DE RECHAZOS POR TELNET
+disable_vrfy_command = yes
+smtpd_delay_reject = yes
+#smtpd_helo_required = yes
+smtpd_helo_restrictions = permit_mynetworks,
+     reject_non_fqdn_hostname,
+     reject_invalid_hostname,
+     permit
+
 smtpd_recipient_restrictions =
-	permit_sasl_authenticated,
-	permit_mynetworks,
-	reject_unauth_destination
+   permit_sasl_authenticated,
+   permit_mynetworks,
+
+   
+   reject_non_fqdn_recipient,
+   reject_non_fqdn_sender,
+   reject_unknown_recipient_domain,
+   reject_unknown_sender_domain,
+   reject_unauth_pipelining,
+   reject_unauth_destination,
+   
+   #Bloqueo dominios sin registro inverso en el dns(afecta también a users)
+   reject_unknown_reverse_client_hostname,
+   
+   #Rechazo helo/Elho Feos
+   reject_non_fqdn_hostname,
+   reject_invalid_hostname,
+
+   #Solo recojo mails de cuentas existentes
+   #reject_unverified_recipient,
+
+   #rechazo de listas de correo negras o de spam
+   reject_rbl_client list.dsbl.org,
+   reject_rbl_client sbl.spamhaus.org,
+   reject_rbl_client cbl.abuseat.org,
+   reject_rbl_client dul.dnsbl.sorbs.net,
+   reject_rbl_client sbl-xbl.spamhaus.org,
+   permit
+   
+   #Configuro tiempos de rechazo para evitar spam
+   smtpd_error_sleep_time = 1s
+   smtpd_soft_error_limit = 10
+   smtpd_hard_error_limit = 20
+
+#FIN CONFIGURACIÖN MANUAL
+
 # See /usr/share/doc/postfix/TLS_README.gz in the postfix-doc package for
 # information on enabling SSL in the smtp client.
 myhostname = $respuestadominio
@@ -104,21 +154,33 @@ alias_database = hash:/etc/aliases
 myorigin = /etc/mailname
 #mydestination = example.com, hostname.example.com, localhost.example.com, localhost
 mydestination = localhost
-relayhost =
+relayhost = 
 mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
 mailbox_size_limit = 0
 recipient_delimiter = +
 inet_interfaces = all
+
 #Handing off local delivery to Dovecot's LMTP, and telling it where to store mail
 virtual_transport = lmtp:unix:private/dovecot-lmtp
+
 #Virtual domains, users, and aliases
 virtual_mailbox_domains = mysql:/etc/postfix/mysql-virtual-mailbox-domains.cf
 virtual_mailbox_maps = mysql:/etc/postfix/mysql-virtual-mailbox-maps.cf
 virtual_alias_maps = mysql:/etc/postfix/mysql-virtual-alias-maps.cf
+smtpd_sasl_security_options = noanonymous
+
+###### OPENDKIM
+milter_default_action = accept
+milter_protocol = 6
+smtpd_milters = inet:localhost:12345
+non_smtpd_milters = inet:localhost:12345
+
+# Amavis como filtro de contenidos en su default port
+content_filter = smtp-amavis:[127.0.0.1]:10024
 EOF
 
 
-# creación tres archivos postfix que mapean la bd
+# creación tres archivos postfix que mapean la bd para los virtualhost
 
 # 1. /etc/postfix/mysql-virtual-mailbox-domains.cf
 cat > /etc/postfix/mysql-virtual-mailbox-domains.cf <<EOF
